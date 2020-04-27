@@ -18,10 +18,28 @@ class DropBoxController {
         });
 
         this.inputFilesEl.addEventListener('change', event => {
-            this.uploadTask(event.target.files);
+            this.btnSendFileEl.disabled = true;
+            this.uploadTask(event.target.files).then(responses => {
+                responses.forEach(resp => {
+                    this.getFirebaseRef().add(resp.files['input-file'])
+                    .then(function(docRef) {
+                        console.log("File written with ID: ", docRef.id);
+                    })
+                    .catch(function(error) {
+                        console.error("Error adding file: ", error);
+                    });
+                });
+                this.uploadComplete();
+            }).catch(error => {
+                this.uploadComplete();
+                console.error(error);
+            });
             this.progressBarShow();
-            this.inputFilesEl.value = '';
         });
+    }
+
+    getFirebaseRef(){
+        return this.db.collection('files');
     }
 
     progressBarShow(show = true){
@@ -32,6 +50,14 @@ class DropBoxController {
         // Initialize Firebase
         firebase.initializeApp(firebaseConfig);
         firebase.analytics();
+        this.db = firebase.firestore();
+    }
+
+    uploadComplete(){
+        this.progressBarShow(false);
+        this.inputFilesEl.value = '';
+        this.btnSendFileEl.disabled = false;
+
     }
 
     uploadTask(files){
@@ -46,7 +72,6 @@ class DropBoxController {
                 ajax.open('POST', '/upload');
 
                 ajax.onload = event => {
-                    this.progressBarShow(false);
                     try {
                         resolve(JSON.parse(ajax.responseText));
                     } catch(e) {
@@ -55,7 +80,6 @@ class DropBoxController {
                 };
 
                 ajax.onerror = event => {
-                    this.progressBarShow(false);
                     reject(event);
                 };
 
