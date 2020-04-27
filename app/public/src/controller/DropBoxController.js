@@ -7,6 +7,8 @@ class DropBoxController {
         this.nameFileEl = this.snackModalEl.querySelector('.filename');
         this.timeLeftEl = this.snackModalEl.querySelector('.timeleft');
 
+
+        this.connectFirebase();
         this.initEvents();
     }
 
@@ -24,6 +26,12 @@ class DropBoxController {
 
     progressBarShow(show = true){
         this.snackModalEl.style.display = (show) ? 'block' : 'none';
+    }
+
+    connectFirebase(){
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        firebase.analytics();
     }
 
     uploadTask(files){
