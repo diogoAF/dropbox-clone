@@ -130,6 +130,43 @@ class DropBoxController {
         }
     }
 
+    initEventsLi(li){
+        li.addEventListener('click', event => {
+
+            if(event.shiftKey){
+                let firstLi = this.listFilesEl.querySelector('li.selected');
+
+                if(firstLi) {
+                    let indexStart;
+                    let indexEnd;
+                    let liArray = li.parentElement.childNodes;
+
+                    liArray.forEach((el, index) => {
+                        if(el === firstLi) indexStart = index;
+                        if(el === li) indexEnd = index;
+                    });
+
+                    let indexSorted = [indexStart, indexEnd].sort();
+
+                    liArray.forEach((el, index) => {
+                        if(index >= indexSorted[0] && index <= indexSorted[1]) el.classList.add("selected");
+                    });
+
+                    return true;
+                }
+            }
+
+            if(!event.ctrlKey){
+                this.listFilesEl.querySelectorAll('li.selected')
+                .forEach( element => {
+                    element.classList.remove('selected');
+                });
+            }
+
+            li.classList.toggle('selected');
+        });
+    }
+
     getFileView(file, key){
         let li = document.createElement('li');
         li.dataset.key = key
@@ -138,6 +175,8 @@ class DropBoxController {
                 ${this.getFileIconView(file)}
                 <div class="name text-center">${file.name}</div>
             `;
+
+        this.initEventsLi(li);
 
         return li;
 
