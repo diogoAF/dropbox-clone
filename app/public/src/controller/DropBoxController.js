@@ -1,5 +1,7 @@
 class DropBoxController {
     constructor(){
+        this.onSelectionChange = new Event('selectionchange');
+
         this.btnSendFileEl = document.querySelector('#btn-send-file');
         this.inputFilesEl = document.querySelector('#files');
         this.snackModalEl = document.querySelector('#react-snackbar-root');
@@ -38,6 +40,10 @@ class DropBoxController {
             });
             this.progressBarShow();
         });
+
+        this.listFilesEl.addEventListener('selectionchange', event => {
+            console.log('selectionchange');
+        })
     }
 
     getFirebaseRef(){
@@ -132,6 +138,8 @@ class DropBoxController {
 
     initEventsLi(li){
         li.addEventListener('click', event => {
+
+            this.listFilesEl.dispatchEvent(this.onSelectionChange);
 
             if(event.shiftKey){
                 let firstLi = this.listFilesEl.querySelector('li.selected');
@@ -365,7 +373,6 @@ class DropBoxController {
                 let key = snapshotItem.id;
                 let data = snapshotItem.data();
 
-                console.log(key, data);
                 this.listFilesEl.appendChild(this.getFileView(data, key));
             });
         });
