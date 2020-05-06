@@ -60,4 +60,5 @@ typings/
 # next.js build output
 .next
 
+# Arquivo de configurações do Firebase
 firebase-config.js

@@ -75,15 +75,14 @@ class DropBoxController {
         this.inputFilesEl.addEventListener('change', event => {
             this.btnSendFileEl.disabled = true;
             this.uploadTask(event.target.files).then(responses => {
-                responses.forEach(resp => {
-                    this.getFirebaseRef().add(resp.files['input-file'])
+                this.getFirebaseRef().add(responses[0])
                     .then(function(docRef) {
                         console.log("File written with ID: ", docRef.id);
                     })
                     .catch(function(error) {
                         console.error("Error adding file: ", error);
                     });
-                });
+
                 this.uploadComplete();
             }).catch(error => {
                 this.uploadComplete();
@@ -199,20 +198,42 @@ class DropBoxController {
 
         filesArray.forEach(file => {
 
-            let formData = new FormData();
-            formData.append('input-file', file);
+            promises.push(new Promise((resolve, reject) => {
+                let fileRef = firebase.storage().ref(this.currentFolder.join('|')).child(file.name);
 
-            let onprogress = event => {
-                this.uploadProgress(event, file);
-            }
-            
-            let onloadstart = () => {
-                this.startUploadTime = Date.now();
-            }
+                let task = fileRef.put(file);
 
-            let promise = this.doAjax('/upload', 'POST', formData, onprogress, onloadstart);
+                task.on('state_changed', snapshot => {
+                    
+                    this.uploadProgress({
+                        loaded: snapshot.bytesTransferred,
+                        total: snapshot.totalBytes
+                    }, file);
 
-            promises.push(promise);
+                }, error => {
+                    reject(error);
+                }, () => {
+                    let response;
+                    let downloadURLRef;
+
+                    fileRef.getDownloadURL().then(function(downloadURL) {
+                        downloadURLRef = downloadURL;
+                    });
+
+                    fileRef.getMetadata().then(metadata => {
+                        response = {
+                            name: metadata.name,
+                            type: metadata.contentType,
+                            path: downloadURLRef,
+                            size: metadata.size
+                        }
+                        resolve(response);
+                    }).catch(err => {
+                        reject(err);
+                    });
+                    
+                });
+            }));
 
         });
 
