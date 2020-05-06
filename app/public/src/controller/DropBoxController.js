@@ -15,11 +15,12 @@ class DropBoxController {
         this.btnNewFolder = document.querySelector('#btn-new-folder');
         this.btnRename = document.querySelector('#btn-rename');
         this.btnDelete = document.querySelector('#btn-delete');
+        this.breadcrumbEl = document.querySelector('#browse-location');
 
 
         this.connectFirebase();
         this.initEvents();
-        this.readFiles();
+        this.openFolder();
     }
 
     initEvents(){
@@ -40,7 +41,6 @@ class DropBoxController {
 
             this.removeTask().then(responses => {
                 responses.forEach(response => {
-                    console.log(response.fields, response);
                     if(response.fields.key){
                         this.getFirebaseRef().doc(response.fields.key).delete().then(function() {
                             console.log("Document successfully deleted!");
@@ -115,8 +115,14 @@ class DropBoxController {
         return this.listFilesEl.querySelectorAll('.selected');
     }
 
-    getFirebaseRef(){
-        return this.db.collection('files');
+    getFirebaseRef(path = null, userid = '2B'){
+        if(!path) {
+            path = this.currentFolder.join('|');
+        } else {
+            // Não podemos inserir um path com '/' pois o Firebase considera como separador de objetos.
+            path = path.replace('/','|');
+        }
+        return this.db.collection('files').doc(userid).collection(path);
     }
 
     progressBarShow(show = true){
@@ -240,7 +246,71 @@ class DropBoxController {
         }
     }
 
+    renderBreadcrumb() {
+
+        let nav = document.createElement('nav');
+        let path = [];
+
+        this.currentFolder.forEach( (folder, index, array) => {
+
+            path.push(folder);
+
+            let span = document.createElement('span');
+            
+            if(Object.is(array.length - 1, index)){
+                // Último elemento
+                span.innerHTML = folder;
+            } else {
+                span.classList.add("breadcrumb-segment__wrapper");
+                span.innerHTML = `
+                                <span class="ue-effect-container uee-BreadCrumbSegment-link-0">
+                                    <a href="#" data-path="${path.join('/')}" class="breadcrumb-segment">${folder}</a>
+                                </span>
+                                <svg width="24" height="24" viewBox="0 0 24 24" class="mc-icon-template-stateless" style="top: 4px; position: relative;">
+                                    <title>arrow-right</title>
+                                    <path d="M10.414 7.05l4.95 4.95-4.95 4.95L9 15.534 12.536 12 9 8.464z" fill="#637282"
+                                        fill-rule="evenodd"></path>
+                                </svg>`;
+            }
+            nav.appendChild(span);
+        });
+
+        this.breadcrumbEl.innerHTML = nav.innerHTML;
+
+        this.breadcrumbEl.querySelectorAll('a').forEach( a => {
+            a.addEventListener('click', event => {
+                event.preventDefault();
+
+                let path = a.dataset.path;
+                this.currentFolder = path.split('/');
+                this.openFolder();
+            });
+        });
+    }
+
+    openFolder() {
+        if(this.lastFolder) this.cancelFolderSnapshotListener();
+        this.renderBreadcrumb();
+        this.readFiles();
+    }
+
     initEventsLi(li){
+
+        li.addEventListener('dblclick', event => {
+            let file = JSON.parse(li.dataset.file);
+
+            switch (file.type) {
+                case 'folder':
+                    this.currentFolder.push(file.name);
+                    this.openFolder(); 
+                    break;
+            
+                default:
+                    window.open('/file?path=' + file.path);
+                    break;
+            }
+        })
+
         li.addEventListener('click', event => {         
 
             if(event.shiftKey){
@@ -473,7 +543,9 @@ class DropBoxController {
     }
 
     readFiles(){
-        this.getFirebaseRef().onSnapshot( snapshot => {
+        this.lastFolder = this.currentFolder.join('/');
+
+        this.cancelFolderSnapshotListener = this.getFirebaseRef().onSnapshot( snapshot => {
             this.listFilesEl.innerHTML = '';
 
             snapshot.forEach(snapshotItem => {
