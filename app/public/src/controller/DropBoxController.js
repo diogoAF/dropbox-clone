@@ -133,13 +133,22 @@ class DropBoxController {
 
         this.getSelection().forEach(li => {
             let file = JSON.parse(li.dataset.file);
-
-            let formData = new FormData();
-            formData.append('path', file.path);
-            formData.append('key', li.dataset.key);
+            let key = li.dataset.key;
 
             promises.push(
-                this.doAjax('file', 'DELETE', formData)
+                new Promise((resolve, reject) => {
+                    let fileRef = firebase.storage().ref(this.currentFolder.join('|')).child(file.name);
+
+                    fileRef.delete().then(() => {
+                        resolve({
+                            fields: {
+                                key
+                            }
+                        });
+                    }).catch(err => {
+                        reject(err);
+                    });
+                })
             );
         });
 
